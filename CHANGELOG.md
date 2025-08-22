@@ -1,3 +1,10 @@
+## 0.1.5
+2025-08-22
+
+* Android: Update AGP and Kotlin to support Flutter 3.35
+* Android: Fix onShow callback not called
+* Android: GTCaptcha4 Android SDK 1.8.9
+
 ## 0.1.4
 2025-03-03
 

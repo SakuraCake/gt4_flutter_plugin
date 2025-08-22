@@ -23,7 +23,7 @@ dependencies:
 
 ```yaml
 dependencies:
-  gt4_flutter_plugin: ^0.1.2
+  gt4_flutter_plugin: ^0.1.5
 ```
 
 ## Configuration
