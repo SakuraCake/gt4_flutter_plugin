@@ -28,11 +28,11 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/gt4_flutter_plugin/ios"
 
 SPEC CHECKSUMS:
-  Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
-  fluttertoast: 31b00dabfa7fb7bacd9e7dbee580d7a2ff4bf265
-  gt4_flutter_plugin: 595705f35f0ae0319afe46584c432bca3775a7f3
+  Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
+  fluttertoast: 76fea30fcf04176325f6864c87306927bd7d2038
+  gt4_flutter_plugin: 836677ce6a6176e33ec0f89594f34fc3c5fa71ae
   Toast: 91b396c56ee72a5790816f40d3a94dd357abc196
 
 PODFILE CHECKSUM: e16eac9ab5ec81ebccaeb5d09cef1eaf8268d7ab
 
-COCOAPODS: 1.15.2
+COCOAPODS: 1.16.2
