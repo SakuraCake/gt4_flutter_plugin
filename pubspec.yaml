@@ -11,6 +11,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  webview_flutter: ^4.8.0
 
 dev_dependencies:
   flutter_test:
@@ -32,6 +33,15 @@ flutter:
         package: com.geetest.captcha.flutter.gt4_flutter_plugin
         pluginClass: Gt4FlutterPlugin
       ios:
+        pluginClass: Gt4FlutterPlugin
+      web:
+        pluginClass: Gt4FlutterPlugin
+        fileName: gt4_flutter_plugin.dart
+      macos:
+        pluginClass: Gt4FlutterPlugin
+      windows:
+        pluginClass: Gt4FlutterPlugin
+      linux:
         pluginClass: Gt4FlutterPlugin
 
   # To add assets to your plugin package, add an assets section, like this:

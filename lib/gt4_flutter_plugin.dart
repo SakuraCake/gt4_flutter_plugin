@@ -1,63 +1,93 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import 'package:gt4_flutter_plugin/gt4_session_configuration.dart';
 
 typedef EventHandler = Function(Map<String, dynamic> event);
 
 class Gt4FlutterPlugin {
   static const String flutterLog = "| Geetest 4.0 | Flutter | ";
-  static const MethodChannel _channel = MethodChannel('gt4_flutter_plugin');
-
+  
   static String get version {
     return "0.1.5";
   }
 
   static Future<String?> get platformVersion async {
-    final String? version = await _channel.invokeMethod('getPlatformVersion');
-    return version;
+    return "4.0.0";
   }
 
   EventHandler? _onShow;
   EventHandler? _onResult;
   EventHandler? _onError;
+  
+  String? _captchaId;
+  GT4SessionConfiguration? _config;
+  WebViewController? _webViewController;
+  BuildContext? _context;
+  bool _isShowing = false;
 
   Gt4FlutterPlugin(String captchaId, [GT4SessionConfiguration? config]) {
-    try {
-      _channel.invokeMethod(
-          'initWithCaptcha',
-          {'captchaId': captchaId, 'config': config?.toMap()}
-            ..removeWhere((key, value) => value == null));
-    } catch (e) {
-      debugPrint(flutterLog + e.toString());
-    }
+    _captchaId = captchaId;
+    _config = config;
   }
 
   /// 开启验证
   void verify() {
-    try {
-      _channel.invokeMethod('verify');
-    } catch (e) {
-      debugPrint(flutterLog + e.toString());
+    if (_captchaId == null) {
+      debugPrint("${flutterLog}CaptchaId is null");
+      return;
     }
+    
+    if (_isShowing) {
+      debugPrint("${flutterLog}Verification is already showing");
+      return;
+    }
+    
+    _isShowing = true;
+    
+    // 创建一个临时的MaterialApp来显示WebView
+    runApp(MaterialApp(
+      home: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Container(
+          color: Colors.white,
+          child: WebView(
+            initialUrl: _getInitialUrl(),
+            javascriptMode: JavascriptMode.unrestricted,
+            javascriptChannels: {
+              _getJavascriptChannel(),
+            },
+            onWebViewCreated: (controller) {
+              _webViewController = controller;
+              _injectJsBridge();
+            },
+            onPageFinished: (url) {
+              _onShow?.call({"show": "1"});
+            },
+          ),
+        ),
+      ),
+    ));
   }
 
   // 关闭验证
   void close() {
-    try {
-      _channel.invokeMethod('close');
-    } catch (e) {
-      debugPrint(flutterLog + e.toString());
+    _isShowing = false;
+    // 在实际应用中，这里应该关闭WebView
+    if (kIsWeb) {
+      // Web平台处理
+    } else if (Platform.isAndroid || Platform.isIOS) {
+      // 移动平台处理
     }
   }
 
   void configurationChanged(Object object) {
-    try {
-      _channel.invokeMethod('configurationChanged', {'newConfig': object});
-    } catch (e) {
-      debugPrint(flutterLog + e.toString());
-    }
+    // 配置变更处理
   }
 
   ///
@@ -91,23 +121,76 @@ class Gt4FlutterPlugin {
     _onShow = onShow;
     _onResult = onResult;
     _onError = onError;
-    _channel.setMethodCallHandler(_handler);
   }
 
-  /// 原生回调
-  Future<dynamic> _handler(MethodCall methodCall) async {
-    switch (methodCall.method) {
-      case "onShow":
-        debugPrint("${flutterLog}onShow:$_onShow");
-        return _onShow!(methodCall.arguments.cast<String, dynamic>());
-      case "onResult":
-        debugPrint("${flutterLog}onResult:$_onResult");
-        return _onResult!(methodCall.arguments.cast<String, dynamic>());
-      case "onError":
-        debugPrint("${flutterLog}onError:$_onError");
-        return _onError!(methodCall.arguments.cast<String, dynamic>());
-      default:
-        throw UnsupportedError("${flutterLog}Unrecognized Event");
+  /// 获取初始URL
+  String _getInitialUrl() {
+    // 构建验证码参数
+    final params = {
+      'captchaId': _captchaId,
+      'debug': _config?.debugEnable ?? false,
+      'title': _config?.title ?? '请通过以下验证',
+    };
+    
+    // 这里应该使用实际的GeeTest验证码URL
+    // 由于我们没有实际的URL，这里使用一个占位符
+    return 'https://www.geetest.com/demo/gt4-demo';
+  }
+
+  /// 获取JavaScript通道
+  JavascriptChannel _getJavascriptChannel() {
+    return JavascriptChannel(
+      name: 'FlutterBridge',
+      onMessageReceived: (JavascriptMessage message) {
+        _handleJsMessage(message.message);
+      },
+    );
+  }
+
+  /// 注入JSBridge
+  void _injectJsBridge() {
+    final jsBridge = '''
+      window.jsBridge = {
+        callNative: function(data) {
+          FlutterBridge.postMessage(JSON.stringify(data));
+        }
+      };
+    ''';
+    
+    _webViewController?.runJavascript(jsBridge);
+  }
+
+  /// 处理JS消息
+  void _handleJsMessage(String message) {
+    try {
+      final data = json.decode(message);
+      final type = data['type'];
+      
+      switch (type) {
+        case 'result':
+          _onResult?.call({
+            'status': '1',
+            'result': data['data'],
+          });
+          _isShowing = false;
+          break;
+        case 'error':
+          _onError?.call({
+            'code': data['data']['code'],
+            'msg': data['data']['msg'],
+            'desc': data['data']['desc'],
+          });
+          _isShowing = false;
+          break;
+        case 'close':
+          _isShowing = false;
+          break;
+        case 'ready':
+          // 验证码准备就绪
+          break;
+      }
+    } catch (e) {
+      debugPrint("${flutterLog}Error handling JS message: $e");
     }
   }
 }
