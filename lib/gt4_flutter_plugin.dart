@@ -69,6 +69,14 @@ class Gt4FlutterPlugin {
             onPageFinished: (url) {
               _onShow?.call({"show": "1"});
             },
+            // 添加WebView平台特定配置
+            navigationDelegate: (NavigationRequest request) {
+              // 阻止跳转到其他页面
+              if (!request.url.startsWith('https://www.geetest.com')) {
+                return NavigationDecision.prevent;
+              }
+              return NavigationDecision.navigate;
+            },
           ),
         ),
       ),
